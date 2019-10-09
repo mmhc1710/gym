@@ -10,7 +10,7 @@ from gym import spaces, logger
 from gym.utils import seeding
 import numpy as np
 
-class CartPoleEnv(gym.Env):
+class CartPoleContinuousEnv(gym.Env):
     """
     Description:
         A pole is attached by an un-actuated joint to a cart, which moves along a frictionless track. The pendulum starts upright, and the goal is to prevent it from falling over by increasing and reducing the cart's velocity.
@@ -18,20 +18,20 @@ class CartPoleEnv(gym.Env):
     Source:
         This environment corresponds to the version of the cart-pole problem described by Barto, Sutton, and Anderson
 
-    Observation: 
+    Observation:
         Type: Box(4)
         Num	Observation                 Min         Max
         0	Cart Position             -4.8            4.8
         1	Cart Velocity             -Inf            Inf
         2	Pole Angle                 -24 deg        24 deg
         3	Pole Velocity At Tip      -Inf            Inf
-        
+
     Actions:
         Type: Discrete(2)
         Num	Action
         0	Push cart to the left
         1	Push cart to the right
-        
+
         Note: The amount the velocity that is reduced or increased is not fixed; it depends on the angle the pole is pointing. This is because the center of gravity of the pole increases the amount of energy needed to move the cart underneath it
 
     Reward:
@@ -47,7 +47,7 @@ class CartPoleEnv(gym.Env):
         Solved Requirements
         Considered solved when the average reward is greater than or equal to 195.0 over 100 consecutive trials.
     """
-    
+
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : 50
@@ -63,6 +63,8 @@ class CartPoleEnv(gym.Env):
         self.force_mag = 10.0
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = 'euler'
+        self.min_action = -1.0
+        self.max_action = 1.0
 
         # Angle at which to fail the episode
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
@@ -75,7 +77,11 @@ class CartPoleEnv(gym.Env):
             self.theta_threshold_radians * 2,
             np.finfo(np.float32).max])
 
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Box(
+            low=self.min_action,
+            high=self.max_action,
+            shape=(1,)
+        )
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
         self.seed()
@@ -92,7 +98,7 @@ class CartPoleEnv(gym.Env):
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         state = self.state
         x, x_dot, theta, theta_dot = state
-        force = self.force_mag if action==1 else -self.force_mag
+        force = self.force_mag * float(action)
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
         temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
