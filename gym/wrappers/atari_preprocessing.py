@@ -15,7 +15,6 @@ class AtariPreprocessing(gym.Wrapper):
     Specifically:
 
     * NoopReset: obtain initial state by taking random number of no-ops on reset. 
-    * FireReset: take action on reset for environments that are fixed until firing. 
     * Frame skipping: 4 by default
     * Max-pooling: most recent two observations
     * Termination signal when a life is lost: turned off by default. Not recommended by Machado et al. (2018).
@@ -41,7 +40,10 @@ class AtariPreprocessing(gym.Wrapper):
         super().__init__(env)
         assert frame_skip > 0
         assert screen_size > 0
-
+        assert noop_max >= 0
+        if frame_skip > 1:
+            assert 'NoFrameskip' in env.spec.id, 'disable frame-skipping in the original env. for more than one' \
+                                                 ' frame-skip as it will be done by the wrapper'
         self.noop_max = noop_max
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
@@ -104,12 +106,6 @@ class AtariPreprocessing(gym.Wrapper):
             _, _, done, _ = self.env.step(0)
             if done:
                 self.env.reset(**kwargs)
-
-        # FireReset
-        action_meanings = self.env.unwrapped.get_action_meanings()
-        if action_meanings[1] == 'FIRE' and len(action_meanings) >= 3:
-            self.env.step(1)
-            self.env.step(2)
 
         self.lives = self.ale.lives()
         if self.grayscale_obs:
