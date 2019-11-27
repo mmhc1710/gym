@@ -101,9 +101,20 @@ class CartPoleContinuousEnv(gym.Env):
         force = self.force_mag * float(action)
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
+
         temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta* temp) / (self.length * (4.0/3.0 - self.masspole * costheta * costheta / self.total_mass))
         xacc  = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+
+        # thetaacc = ((self.gravity * sintheta) - (costheta * force / self.total_mass)) / self.length
+        # xacc = (force - self.polemass_length * thetaacc * costheta) / self.total_mass
+
+        # xacc = (force) / self.total_mass
+        # thetaacc = (2. - (force / self.total_mass)) / self.length
+
+        # xacc = (force) / self.total_mass
+        # thetaacc = (- (force / self.total_mass)) / self.length
+
         if self.kinematics_integrator == 'euler':
             x  = x + self.tau * x_dot
             x_dot = x_dot + self.tau * xacc
@@ -121,12 +132,18 @@ class CartPoleContinuousEnv(gym.Env):
                 or theta > self.theta_threshold_radians
         done = bool(done)
 
+        # costs = angle_normalize(theta)**2 + .1 * theta_dot**2 + .1 * x_dot**2 + 1*self.out_of_bound(x) # + x**2 + .001 * (force ** 2)
+        # if ((theta>0.) and (theta_dot>0.) and (force<0.)) or (theta<0.) and (theta_dot<0.) and (force>0.):
+        #         costs+=1.
+
+        costs = -1.
+
         if not done:
-            reward = 1.0
+            reward = -costs  # 1.0
         elif self.steps_beyond_done is None:
             # Pole just fell!
             self.steps_beyond_done = 0
-            reward = 1.0
+            reward = -costs  # 1.0
         else:
             if self.steps_beyond_done == 0:
                 logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
@@ -137,6 +154,8 @@ class CartPoleContinuousEnv(gym.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+        self.state[2] = self.np_random.uniform(low=np.deg2rad(40.), high=np.deg2rad(50.), size=(1,))
+        # self.state[3] = self.np_random.uniform(low=-45. * math.pi / 180., high=45. * math.pi / 180., size=(1,))
         self.steps_beyond_done = None
         return np.array(self.state)
 
@@ -148,7 +167,7 @@ class CartPoleContinuousEnv(gym.Env):
         scale = screen_width/world_width
         carty = 100 # TOP OF CART
         polewidth = 10.0
-        polelen = scale * (2 * self.length)
+        polelen = screen_width/(2*2.4)*(2 * self.length) #scale * (2 * self.length)
         cartwidth = 50.0
         cartheight = 30.0
 
@@ -197,3 +216,13 @@ class CartPoleContinuousEnv(gym.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
+    def out_of_bound(self, x):
+        if (x < -self.x_threshold) or (x > self.x_threshold):
+            return 1.0
+        else:
+            return -1.0
+
+
+def angle_normalize(x):
+    return (((x + np.pi) % (2 * np.pi)) - np.pi)

@@ -98,8 +98,6 @@ class CartPoleEnv(gym.Env):
         temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta* temp) / (self.length * (4.0/3.0 - self.masspole * costheta * costheta / self.total_mass))
         xacc  = temp - self.polemass_length * thetaacc * costheta / self.total_mass
-        # thetaacc = - force
-        # xacc = force - thetaacc
         if self.kinematics_integrator == 'euler':
             x  = x + self.tau * x_dot
             x_dot = x_dot + self.tau * xacc
@@ -117,15 +115,12 @@ class CartPoleEnv(gym.Env):
                 or theta > self.theta_threshold_radians
         done = bool(done)
 
-        # costs = angle_normalize(theta) ** 2 + .1 * theta_dot ** 2 + .1 * x_dot ** 2 + 1*self.out_of_bound(x)  # + .001 * (force ** 2)
-        costs = -1.
-
         if not done:
-            reward = -costs #1.0
+            reward = 1.0
         elif self.steps_beyond_done is None:
             # Pole just fell!
             self.steps_beyond_done = 0
-            reward = -costs #1.0
+            reward = 1.0
         else:
             if self.steps_beyond_done == 0:
                 logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
@@ -197,13 +192,3 @@ class CartPoleEnv(gym.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
-
-    def out_of_bound(self, x):
-        if (x < -self.x_threshold) or (x > self.x_threshold):
-            return 1.0
-        else:
-            return -1.0
-
-
-def angle_normalize(x):
-    return (((x + np.pi) % (2 * np.pi)) - np.pi)

@@ -18,20 +18,20 @@ class CartPoleEnv(gym.Env):
     Source:
         This environment corresponds to the version of the cart-pole problem described by Barto, Sutton, and Anderson
 
-    Observation:
+    Observation: 
         Type: Box(4)
         Num	Observation                 Min         Max
         0	Cart Position             -4.8            4.8
         1	Cart Velocity             -Inf            Inf
         2	Pole Angle                 -24 deg        24 deg
         3	Pole Velocity At Tip      -Inf            Inf
-
+        
     Actions:
         Type: Discrete(2)
         Num	Action
         0	Push cart to the left
         1	Push cart to the right
-
+        
         Note: The amount the velocity that is reduced or increased is not fixed; it depends on the angle the pole is pointing. This is because the center of gravity of the pole increases the amount of energy needed to move the cart underneath it
 
     Reward:
@@ -47,7 +47,7 @@ class CartPoleEnv(gym.Env):
         Solved Requirements
         Considered solved when the average reward is greater than or equal to 195.0 over 100 consecutive trials.
     """
-
+    
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second' : 50
@@ -60,12 +60,12 @@ class CartPoleEnv(gym.Env):
         self.total_mass = (self.masspole + self.masscart)
         self.length = 0.5 # actually half the pole's length
         self.polemass_length = (self.masspole * self.length)
-        self.force_mag = 5*10.0
+        self.force_mag = 10.0
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = 'euler'
 
         # Angle at which to fail the episode
-        self.theta_threshold_radians = 5 * 12 * 2 * math.pi / 360
+        self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation is still within bounds
@@ -98,8 +98,6 @@ class CartPoleEnv(gym.Env):
         temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta* temp) / (self.length * (4.0/3.0 - self.masspole * costheta * costheta / self.total_mass))
         xacc  = temp - self.polemass_length * thetaacc * costheta / self.total_mass
-        # thetaacc = - force
-        # xacc = force - thetaacc
         if self.kinematics_integrator == 'euler':
             x  = x + self.tau * x_dot
             x_dot = x_dot + self.tau * xacc
@@ -117,15 +115,12 @@ class CartPoleEnv(gym.Env):
                 or theta > self.theta_threshold_radians
         done = bool(done)
 
-        # costs = angle_normalize(theta) ** 2 + .1 * theta_dot ** 2 + .1 * x_dot ** 2 + 1*self.out_of_bound(x)  # + .001 * (force ** 2)
-        costs = -1.
-
         if not done:
-            reward = -costs #1.0
+            reward = 1.0
         elif self.steps_beyond_done is None:
             # Pole just fell!
             self.steps_beyond_done = 0
-            reward = -costs #1.0
+            reward = 1.0
         else:
             if self.steps_beyond_done == 0:
                 logger.warn("You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
@@ -136,7 +131,6 @@ class CartPoleEnv(gym.Env):
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
-        self.state[2] = self.np_random.uniform(low=-45. * math.pi / 180., high=45. * math.pi / 180., size=(1,))
         self.steps_beyond_done = None
         return np.array(self.state)
 
@@ -197,13 +191,3 @@ class CartPoleEnv(gym.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
-
-    def out_of_bound(self, x):
-        if (x < -self.x_threshold) or (x > self.x_threshold):
-            return 1.0
-        else:
-            return -1.0
-
-
-def angle_normalize(x):
-    return (((x + np.pi) % (2 * np.pi)) - np.pi)

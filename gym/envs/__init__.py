@@ -51,6 +51,20 @@ register(
 # ----------------------------------------
 
 register(
+    id='FixedWing-v0',
+    entry_point='gym.envs.classic_control:FixedWingEnv',
+    max_episode_steps=100000,
+    # reward_threshold=1000.0,
+)
+
+register(
+    id='Car-v0',
+    entry_point='gym.envs.classic_control:CarEnv',
+    max_episode_steps=100000,
+    # reward_threshold=1000.0,
+)
+
+register(
     id='CartPole-v0',
     entry_point='gym.envs.classic_control:CartPoleEnv',
     max_episode_steps=200,

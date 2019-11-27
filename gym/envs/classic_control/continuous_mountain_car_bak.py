@@ -37,7 +37,6 @@ class Continuous_MountainCarEnv(gym.Env):
         self.goal_position = 0.45 # was 0.5 in gym, 0.45 in Arnaud de Broissia's version
         self.goal_velocity = goal_velocity
         self.power = 0.0015
-        self.tau = 1.0
 
         self.low_state = np.array([self.min_position, -self.max_speed])
         self.high_state = np.array([self.max_position, self.max_speed])
@@ -65,22 +64,12 @@ class Continuous_MountainCarEnv(gym.Env):
         velocity += force*self.power -0.0025 * math.cos(3*position)
         if (velocity > self.max_speed): velocity = self.max_speed
         if (velocity < -self.max_speed): velocity = -self.max_speed
-        position += velocity*self.tau
+        position += velocity
         if (position > self.max_position): position = self.max_position
         if (position < self.min_position): position = self.min_position
-
-        cost = (self.goal_position - position) ** 2 + 0.1 * (self.goal_velocity) ** 2
-
-        if (position==self.min_position and velocity<0):
-            velocity = 0
-            cost += 1.0
+        if (position==self.min_position and velocity<0): velocity = 0
 
         done = bool(position >= self.goal_position and velocity >= self.goal_velocity)
-
-        if not done:
-            cost+= 1.0
-
-        reward = -cost
 
         reward = 0
         if done:
